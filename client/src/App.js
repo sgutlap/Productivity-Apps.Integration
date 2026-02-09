@@ -3,21 +3,31 @@ import axios from 'axios';
 import './App.css';
 
 function App() {
+  const [activeView, setActiveView] = useState('dashboard');
   const [todoistTasks, setTodoistTasks] = useState([]);
   const [dynalistDocs, setDynalistDocs] = useState([]);
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [loading, setLoading] = useState({ todoist: false, dynalist: false, calendar: false });
   const [errors, setErrors] = useState({ todoist: null, dynalist: null, calendar: null });
-  const [stats, setStats] = useState({ totalTasks: 0, completedToday: 0, upcomingEvents: 0 });
+  const [stats, setStats] = useState({ totalTasks: 0, completedToday: 0, upcomingEvents: 0, totalDocs: 0 });
+  const [quickAddText, setQuickAddText] = useState('');
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     loadAllData();
+    // Auto-refresh every 5 minutes
+    const interval = setInterval(loadAllData, 300000);
+    return () => clearInterval(interval);
   }, []);
 
-  const loadAllData = () => {
-    loadTodoistData();
-    loadDynalistData();
-    loadCalendarData();
+  const loadAllData = async () => {
+    setSyncing(true);
+    await Promise.all([
+      loadTodoistData(),
+      loadDynalistData(),
+      loadCalendarData()
+    ]);
+    setSyncing(false);
   };
 
   const loadTodoistData = async () => {
@@ -86,6 +96,13 @@ function App() {
       if (source === 'calendar' && data) {
         newStats.upcomingEvents = data.length;
       }
+
+      if (source === 'dynalist' && data) {
+        newStats.totalDocs = data.length;
+        let totalItems = 0;
+        data.forEach(doc => totalItems += doc.tasks.length);
+        newStats.dynalistItems = totalItems;
+      }
       
       return newStats;
     });
@@ -95,157 +112,622 @@ function App() {
     try {
       const response = await axios.get('/api/google/auth-url');
       if (response.data.success) {
-        window.open(response.data.authUrl, '_blank');
-        alert('Please authenticate in the new window, then refresh this page.');
+        window.open(response.data.authUrl, '_blank', 'width=600,height=700');
+        alert('Please authenticate in the popup window, then click "Refresh Calendar" button.');
       }
     } catch (error) {
       alert('Failed to get Google authentication URL');
     }
   };
 
+  const handleQuickAdd = async () => {
+    if (!quickAddText.trim()) return;
+    
+    try {
+      const response = await axios.post('/api/todoist/tasks', {
+        content: quickAddText
+      });
+      
+      if (response.data.success) {
+        setQuickAddText('');
+        await loadTodoistData();
+      }
+    } catch (error) {
+      alert('Failed to create task: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
+  const handleQuickAddKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleQuickAdd();
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const isTomorrow = date.toDateString() === new Date(now.getTime() + 86400000).toDateString();
+    
+    if (isToday) return 'Today';
+    if (isTomorrow) return 'Tomorrow';
+    
     return date.toLocaleString('en-US', { 
       month: 'short', 
-      day: 'numeric', 
-      hour: '2-digit', 
-      minute: '2-digit' 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
+  };
+
+  const formatEventTime = (startString, endString) => {
+    if (!startString) return '';
+    const start = new Date(startString);
+    const end = endString ? new Date(endString) : null;
+    
+    const timeStr = start.toLocaleString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    if (end) {
+      const endTimeStr = end.toLocaleString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      return `${timeStr} - ${endTimeStr}`;
+    }
+    
+    return timeStr;
+  };
+
+  const isToday = (dateString) => {
+    if (!dateString) return false;
+    const date = new Date(dateString);
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
+
+  const isPast = (dateString) => {
+    if (!dateString) return false;
+    return new Date(dateString) < new Date();
+  };
+
+  const getDueClass = (dueDate) => {
+    if (!dueDate) return '';
+    const date = new Date(dueDate);
+    const now = new Date();
+    
+    if (date < now) return 'overdue';
+    if (date.toDateString() === now.toDateString()) return 'today';
+    return '';
   };
 
   return (
     <div className="app">
-      <header className="header">
-        <h1>🎯 My Productivity Hub</h1>
-        <p>All your tasks, lists, and calendar in one place</p>
-      </header>
+      {/* Sidebar Navigation */}
+      <aside className="sidebar">
+        <div className="sidebar-header">
+          <div className="logo">
+            <span>🎯</span>
+            <span>Productivity Hub</span>
+          </div>
+        </div>
+        
+        <nav className="sidebar-nav">
+          <div className="nav-section">
+            <div className="nav-section-title">Views</div>
+            <div 
+              className={`nav-item ${activeView === 'dashboard' ? 'active' : ''}`}
+              onClick={() => setActiveView('dashboard')}
+            >
+              <span className="nav-item-icon">📊</span>
+              <span>Dashboard</span>
+            </div>
+            <div 
+              className={`nav-item ${activeView === 'today' ? 'active' : ''}`}
+              onClick={() => setActiveView('today')}
+            >
+              <span className="nav-item-icon">⭐</span>
+              <span>Today</span>
+              <span className="nav-item-count">{stats.totalTasks}</span>
+            </div>
+            <div 
+              className={`nav-item ${activeView === 'calendar' ? 'active' : ''}`}
+              onClick={() => setActiveView('calendar')}
+            >
+              <span className="nav-item-icon">📅</span>
+              <span>Calendar</span>
+              <span className="nav-item-count">{stats.upcomingEvents}</span>
+            </div>
+          </div>
+          
+          <div className="nav-section">
+            <div className="nav-section-title">Sources</div>
+            <div 
+              className={`nav-item ${activeView === 'todoist' ? 'active' : ''}`}
+              onClick={() => setActiveView('todoist')}
+            >
+              <span className="nav-item-icon">✓</span>
+              <span>Todoist Tasks</span>
+              <span className="nav-item-count">{todoistTasks.length}</span>
+            </div>
+            <div 
+              className={`nav-item ${activeView === 'dynalist' ? 'active' : ''}`}
+              onClick={() => setActiveView('dynalist')}
+            >
+              <span className="nav-item-icon">📝</span>
+              <span>Dynalist Lists</span>
+              <span className="nav-item-count">{stats.totalDocs}</span>
+            </div>
+          </div>
+        </nav>
+      </aside>
 
-      <div className="stats">
-        <div className="stat-box">
-          <span className="stat-number">{stats.totalTasks}</span>
-          <span className="stat-label">Active Tasks</span>
+      {/* Main Content */}
+      <main className="main-content">
+        <div className="top-bar">
+          <h1 className="view-title">
+            {activeView === 'dashboard' && '📊 Dashboard'}
+            {activeView === 'today' && '⭐ Today'}
+            {activeView === 'calendar' && '📅 Calendar'}
+            {activeView === 'todoist' && '✓ Todoist Tasks'}
+            {activeView === 'dynalist' && '📝 Dynalist Lists'}
+          </h1>
+          <div className="top-bar-actions">
+            <div className={`sync-status ${syncing ? 'syncing' : ''}`}>
+              {syncing ? (
+                <>
+                  <span className="loading-spinner" style={{width: '16px', height: '16px', borderWidth: '2px'}}></span>
+                  <span>Syncing...</span>
+                </>
+              ) : (
+                <span>✓ Synced</span>
+              )}
+            </div>
+            <button className="icon-button" onClick={loadAllData} title="Refresh all">
+              🔄
+            </button>
+          </div>
         </div>
-        <div className="stat-box">
-          <span className="stat-number">{stats.upcomingEvents}</span>
-          <span className="stat-label">Upcoming Events</span>
-        </div>
-        <div className="stat-box">
-          <span className="stat-number">{dynalistDocs.length}</span>
-          <span className="stat-label">Documents</span>
-        </div>
-      </div>
+        
+        <div className="content-area">
+          {/* Quick Add Bar */}
+          {(activeView === 'dashboard' || activeView === 'today' || activeView === 'todoist') && (
+            <div className="quick-add">
+              <input
+                type="text"
+                className="quick-add-input"
+                placeholder="✨ Quick add task... (Press Enter)"
+                value={quickAddText}
+                onChange={(e) => setQuickAddText(e.target.value)}
+                onKeyPress={handleQuickAddKeyPress}
+              />
+              {quickAddText && (
+                <div className="quick-add-actions">
+                  <button className="quick-add-button primary" onClick={handleQuickAdd}>
+                    Add to Todoist
+                  </button>
+                  <button 
+                    className="quick-add-button secondary" 
+                    onClick={() => setQuickAddText('')}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
-      <div className="dashboard">
-        {/* Todoist Section */}
-        <div className="card">
-          <h2>📋 Todoist - Quick Tasks</h2>
-          {errors.todoist && <div className="error">{errors.todoist}</div>}
-          {loading.todoist ? (
-            <div className="loading">Loading tasks...</div>
-          ) : todoistTasks.length > 0 ? (
-            <ul className="task-list">
-              {todoistTasks.slice(0, 10).map(task => (
-                <li key={task.id} className="task-item">
-                  <input type="checkbox" className="task-checkbox" />
-                  <div className="task-content">
-                    <div>{task.content}</div>
-                    {task.due && (
-                      <div className="task-due">Due: {formatDate(task.due.date)}</div>
+          {/* Dashboard View */}
+          {activeView === 'dashboard' && (
+            <>
+              <div className="stats">
+                <div className="stat-box">
+                  <div className="stat-icon">✓</div>
+                  <span className="stat-number">{stats.totalTasks}</span>
+                  <span className="stat-label">Active Tasks</span>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-icon">📅</div>
+                  <span className="stat-number">{stats.upcomingEvents}</span>
+                  <span className="stat-label">Upcoming Events</span>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-icon">📝</div>
+                  <span className="stat-number">{stats.totalDocs}</span>
+                  <span className="stat-label">Documents</span>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-icon">📋</div>
+                  <span className="stat-number">{stats.dynalistItems || 0}</span>
+                  <span className="stat-label">List Items</span>
+                </div>
+              </div>
+
+              <div className="dashboard">
+                {/* Todoist Section */}
+                <div className="card">
+                  <div className="card-header">
+                    <h2>✓ Todoist - Quick Tasks</h2>
+                    <button className="icon-button" onClick={loadTodoistData}>🔄</button>
+                  </div>
+                  <div className="card-body">
+                    {errors.todoist && (
+                      <div className="error">
+                        <span className="error-icon">⚠️</span>
+                        <span>{errors.todoist}</span>
+                      </div>
+                    )}
+                    {loading.todoist ? (
+                      <div className="loading">
+                        <div className="loading-spinner"></div>
+                        <p>Loading tasks...</p>
+                      </div>
+                    ) : todoistTasks.length > 0 ? (
+                      <ul className="task-list">
+                        {todoistTasks.slice(0, 10).map(task => (
+                          <li key={task.id} className="task-item">
+                            <input type="checkbox" className="task-checkbox" />
+                            <div className="task-content">
+                              <div className="task-title">{task.content}</div>
+                              <div className="task-meta">
+                                {task.due && (
+                                  <div className={`task-due ${getDueClass(task.due.date)}`}>
+                                    🗓️ {formatDate(task.due.date)}
+                                  </div>
+                                )}
+                                {task.priority && task.priority > 1 && (
+                                  <div className={`task-priority ${task.priority === 4 ? 'high' : task.priority === 3 ? 'medium' : 'low'}`}>
+                                    P{5 - task.priority}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="no-data">
+                        <div className="no-data-icon">✓</div>
+                        <div className="no-data-text">No active tasks</div>
+                      </div>
                     )}
                   </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="no-data">No tasks found</div>
-          )}
-          <button className="refresh-button" onClick={loadTodoistData}>
-            Refresh Tasks
-          </button>
-        </div>
+                </div>
 
-        {/* Dynalist Section */}
-        <div className="card">
-          <h2>📝 Dynalist - All My Lists</h2>
-          {errors.dynalist && <div className="error">{errors.dynalist}</div>}
-          {loading.dynalist ? (
-            <div className="loading">Loading documents...</div>
-          ) : dynalistDocs.length > 0 ? (
-            <div>
-              {dynalistDocs.map(doc => (
-                <div key={doc.documentId} className="document-section">
-                  <div className="document-title">{doc.documentTitle}</div>
+                {/* Dynalist Section */}
+                <div className="card">
+                  <div className="card-header">
+                    <h2>📝 Dynalist - All Lists</h2>
+                    <button className="icon-button" onClick={loadDynalistData}>🔄</button>
+                  </div>
+                  <div className="card-body">
+                    {errors.dynalist && (
+                      <div className="error">
+                        <span className="error-icon">⚠️</span>
+                        <span>{errors.dynalist}</span>
+                      </div>
+                    )}
+                    {loading.dynalist ? (
+                      <div className="loading">
+                        <div className="loading-spinner"></div>
+                        <p>Loading documents...</p>
+                      </div>
+                    ) : dynalistDocs.length > 0 ? (
+                      <div>
+                        {dynalistDocs.map(doc => (
+                          <div key={doc.documentId} className="document-section" style={{marginBottom: '20px'}}>
+                            <div className="document-title">{doc.documentTitle}</div>
+                            <ul className="task-list">
+                              {doc.tasks.slice(0, 5).map(task => (
+                                <li key={task.id} className={`task-item ${task.checked ? 'task-completed' : ''}`}>
+                                  <input 
+                                    type="checkbox" 
+                                    className="task-checkbox" 
+                                    checked={task.checked}
+                                    readOnly
+                                  />
+                                  <div className="task-content">
+                                    <div className="task-title">{task.content}</div>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="no-data">
+                        <div className="no-data-icon">📝</div>
+                        <div className="no-data-text">No documents found</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Google Calendar Section */}
+                <div className="card">
+                  <div className="card-header">
+                    <h2>📅 Calendar - Upcoming</h2>
+                    <button className="icon-button" onClick={loadCalendarData}>🔄</button>
+                  </div>
+                  <div className="card-body">
+                    {errors.calendar && (
+                      <div className="auth-section">
+                        <div className="auth-message">{errors.calendar}</div>
+                        {errors.calendar.includes('authenticate') && (
+                          <button className="auth-button" onClick={handleGoogleAuth}>
+                            🔐 Authenticate with Google
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {loading.calendar ? (
+                      <div className="loading">
+                        <div className="loading-spinner"></div>
+                        <p>Loading events...</p>
+                      </div>
+                    ) : calendarEvents.length > 0 ? (
+                      <ul className="event-list">
+                        {calendarEvents.slice(0, 10).map(event => {
+                          const eventDate = event.start?.dateTime || event.start?.date;
+                          return (
+                            <li 
+                              key={event.id} 
+                              className={`event-item ${isToday(eventDate) ? 'today' : ''} ${isPast(eventDate) ? 'past' : ''}`}
+                            >
+                              <div className="event-time">
+                                🕒 {formatEventTime(event.start?.dateTime || event.start?.date, event.end?.dateTime || event.end?.date)}
+                              </div>
+                              <div className="event-title">{event.summary}</div>
+                              {event.description && (
+                                <div className="event-description">{event.description.substring(0, 100)}</div>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : !errors.calendar ? (
+                      <div className="no-data">
+                        <div className="no-data-icon">📅</div>
+                        <div className="no-data-text">No upcoming events</div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Today View - Same as Todoist but filtered */}
+          {activeView === 'today' && (
+            <div className="card">
+              <div className="card-header">
+                <h2>⭐ Today's Tasks</h2>
+                <button className="refresh-button" onClick={loadTodoistData}>
+                  🔄 Refresh
+                </button>
+              </div>
+              <div className="card-body">
+                {errors.todoist && (
+                  <div className="error">
+                    <span className="error-icon">⚠️</span>
+                    <span>{errors.todoist}</span>
+                  </div>
+                )}
+                {loading.todoist ? (
+                  <div className="loading">
+                    <div className="loading-spinner"></div>
+                    <p>Loading tasks...</p>
+                  </div>
+                ) : todoistTasks.length > 0 ? (
                   <ul className="task-list">
-                    {doc.tasks.slice(0, 5).map(task => (
+                    {todoistTasks.map(task => (
                       <li key={task.id} className="task-item">
-                        <input 
-                          type="checkbox" 
-                          className="task-checkbox" 
-                          checked={task.checked}
-                          readOnly
-                        />
-                        <div className={`task-content ${task.checked ? 'task-completed' : ''}`}>
-                          {task.content}
+                        <input type="checkbox" className="task-checkbox" />
+                        <div className="task-content">
+                          <div className="task-title">{task.content}</div>
+                          <div className="task-meta">
+                            {task.due && (
+                              <div className={`task-due ${getDueClass(task.due.date)}`}>
+                                🗓️ {formatDate(task.due.date)}
+                              </div>
+                            )}
+                            {task.priority && task.priority > 1 && (
+                              <div className={`task-priority ${task.priority === 4 ? 'high' : task.priority === 3 ? 'medium' : 'low'}`}>
+                                P{5 - task.priority}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </li>
                     ))}
                   </ul>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="no-data">No documents found</div>
-          )}
-          <button className="refresh-button" onClick={loadDynalistData}>
-            Refresh Lists
-          </button>
-        </div>
-
-        {/* Google Calendar Section */}
-        <div className="card">
-          <h2>📅 Calendar - Time Blocking</h2>
-          {errors.calendar && (
-            <div className="auth-section">
-              <div>{errors.calendar}</div>
-              {errors.calendar.includes('authenticate') && (
-                <button className="auth-button" onClick={handleGoogleAuth}>
-                  Authenticate with Google
-                </button>
-              )}
-            </div>
-          )}
-          {loading.calendar ? (
-            <div className="loading">Loading events...</div>
-          ) : calendarEvents.length > 0 ? (
-            <ul className="event-list">
-              {calendarEvents.map(event => (
-                <li key={event.id} className="event-item">
-                  <div className="event-time">
-                    {formatDate(event.start?.dateTime || event.start?.date)}
+                ) : (
+                  <div className="no-data">
+                    <div className="no-data-icon">⭐</div>
+                    <div className="no-data-text">No tasks for today. Great job!</div>
                   </div>
-                  <div className="event-title">{event.summary}</div>
-                </li>
-              ))}
-            </ul>
-          ) : !errors.calendar ? (
-            <div className="no-data">No upcoming events</div>
-          ) : null}
-          <button className="refresh-button" onClick={loadCalendarData}>
-            Refresh Calendar
-          </button>
-        </div>
-      </div>
+                )}
+              </div>
+            </div>
+          )}
 
-      <div style={{ textAlign: 'center', color: 'white', marginTop: '20px', opacity: 0.8 }}>
-        <button 
-          className="refresh-button" 
-          onClick={loadAllData}
-          style={{ fontSize: '1.1em', padding: '12px 30px' }}
-        >
-          🔄 Refresh All Data
-        </button>
-      </div>
+          {/* Todoist View */}
+          {activeView === 'todoist' && (
+            <div className="card">
+              <div className="card-header">
+                <h2>✓ All Todoist Tasks</h2>
+                <button className="refresh-button" onClick={loadTodoistData}>
+                  🔄 Refresh
+                </button>
+              </div>
+              <div className="card-body">
+                {errors.todoist && (
+                  <div className="error">
+                    <span className="error-icon">⚠️</span>
+                    <span>{errors.todoist}</span>
+                  </div>
+                )}
+                {loading.todoist ? (
+                  <div className="loading">
+                    <div className="loading-spinner"></div>
+                    <p>Loading tasks...</p>
+                  </div>
+                ) : todoistTasks.length > 0 ? (
+                  <ul className="task-list">
+                    {todoistTasks.map(task => (
+                      <li key={task.id} className="task-item">
+                        <input type="checkbox" className="task-checkbox" />
+                        <div className="task-content">
+                          <div className="task-title">{task.content}</div>
+                          <div className="task-meta">
+                            {task.due && (
+                              <div className={`task-due ${getDueClass(task.due.date)}`}>
+                                🗓️ {formatDate(task.due.date)}
+                              </div>
+                            )}
+                            {task.priority && task.priority > 1 && (
+                              <div className={`task-priority ${task.priority === 4 ? 'high' : task.priority === 3 ? 'medium' : 'low'}`}>
+                                P{5 - task.priority}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="no-data">
+                    <div className="no-data-icon">✓</div>
+                    <div className="no-data-text">No tasks found</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Dynalist View */}
+          {activeView === 'dynalist' && (
+            <div className="card">
+              <div className="card-header">
+                <h2>📝 All Dynalist Documents</h2>
+                <button className="refresh-button" onClick={loadDynalistData}>
+                  🔄 Refresh
+                </button>
+              </div>
+              <div className="card-body">
+                {errors.dynalist && (
+                  <div className="error">
+                    <span className="error-icon">⚠️</span>
+                    <span>{errors.dynalist}</span>
+                  </div>
+                )}
+                {loading.dynalist ? (
+                  <div className="loading">
+                    <div className="loading-spinner"></div>
+                    <p>Loading documents...</p>
+                  </div>
+                ) : dynalistDocs.length > 0 ? (
+                  <div>
+                    {dynalistDocs.map(doc => (
+                      <div key={doc.documentId} className="document-section" style={{marginBottom: '32px'}}>
+                        <div className="document-title" style={{fontSize: '1.2em', marginBottom: '16px'}}>{doc.documentTitle}</div>
+                        <ul className="task-list">
+                          {doc.tasks.map(task => (
+                            <li key={task.id} className={`task-item ${task.checked ? 'task-completed' : ''}`}>
+                              <input 
+                                type="checkbox" 
+                                className="task-checkbox" 
+                                checked={task.checked}
+                                readOnly
+                              />
+                              <div className="task-content">
+                                <div className="task-title">{task.content}</div>
+                                {task.note && (
+                                  <div className="task-meta">
+                                    <span style={{color: '#718096', fontSize: '0.85em'}}>{task.note}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="no-data">
+                    <div className="no-data-icon">📝</div>
+                    <div className="no-data-text">No documents found</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Calendar View */}
+          {activeView === 'calendar' && (
+            <div className="card">
+              <div className="card-header">
+                <h2>📅 Google Calendar Events</h2>
+                <button className="refresh-button" onClick={loadCalendarData}>
+                  🔄 Refresh
+                </button>
+              </div>
+              <div className="card-body">
+                {errors.calendar && (
+                  <div className="auth-section">
+                    <div className="auth-message">{errors.calendar}</div>
+                    {errors.calendar.includes('authenticate') && (
+                      <button className="auth-button" onClick={handleGoogleAuth}>
+                        🔐 Authenticate with Google
+                      </button>
+                    )}
+                  </div>
+                )}
+                {loading.calendar ? (
+                  <div className="loading">
+                    <div className="loading-spinner"></div>
+                    <p>Loading events...</p>
+                  </div>
+                ) : calendarEvents.length > 0 ? (
+                  <ul className="event-list">
+                    {calendarEvents.map(event => {
+                      const eventDate = event.start?.dateTime || event.start?.date;
+                      return (
+                        <li 
+                          key={event.id} 
+                          className={`event-item ${isToday(eventDate) ? 'today' : ''} ${isPast(eventDate) ? 'past' : ''}`}
+                        >
+                          <div className="event-time">
+                            🕒 {formatEventTime(event.start?.dateTime || event.start?.date, event.end?.dateTime || event.end?.date)}
+                          </div>
+                          <div className="event-title">{event.summary}</div>
+                          {event.description && (
+                            <div className="event-description">{event.description}</div>
+                          )}
+                          {event.location && (
+                            <div className="event-description">📍 {event.location}</div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : !errors.calendar ? (
+                  <div className="no-data">
+                    <div className="no-data-icon">📅</div>
+                    <div className="no-data-text">No upcoming events</div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
