@@ -113,11 +113,28 @@ function App() {
     try {
       const response = await axios.get('/api/google/auth-url');
       if (response.data.success) {
-        window.open(response.data.authUrl, '_blank', 'width=600,height=700');
-        alert('Please authenticate in the popup window, then click "Refresh Calendar" button.');
+        const width = 600;
+        const height = 700;
+        const left = window.screen.width / 2 - width / 2;
+        const top = window.screen.height / 2 - height / 2;
+        
+        window.open(
+          response.data.authUrl, 
+          'Google Authentication',
+          `width=${width},height=${height},left=${left},top=${top}`
+        );
+        
+        // Show inline message instead of alert
+        setErrors(prev => ({ 
+          ...prev, 
+          calendar: 'Authentication window opened. Please complete the sign-in process, then click "Refresh Calendar".' 
+        }));
       }
     } catch (error) {
-      alert('Failed to get Google authentication URL');
+      setErrors(prev => ({ 
+        ...prev, 
+        calendar: 'Failed to get Google authentication URL. Please try again.' 
+      }));
     }
   };
 
@@ -134,7 +151,10 @@ function App() {
         await loadTodoistData();
       }
     } catch (error) {
-      alert('Failed to create task: ' + (error.response?.data?.error || error.message));
+      setErrors(prev => ({
+        ...prev,
+        todoist: 'Failed to create task: ' + (error.response?.data?.error || error.message)
+      }));
     }
   };
 

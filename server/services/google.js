@@ -62,7 +62,7 @@ class GoogleCalendarService {
     }
   }
 
-  async createEvent(summary, description, startDateTime, endDateTime) {
+  async createEvent(summary, description, startDateTime, endDateTime, timeZone = 'UTC') {
     try {
       const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
       
@@ -71,11 +71,11 @@ class GoogleCalendarService {
         description,
         start: {
           dateTime: startDateTime,
-          timeZone: 'America/Los_Angeles',
+          timeZone: timeZone,
         },
         end: {
           dateTime: endDateTime,
-          timeZone: 'America/Los_Angeles',
+          timeZone: timeZone,
         },
       };
 
