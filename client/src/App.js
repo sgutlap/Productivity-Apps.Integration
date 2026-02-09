@@ -18,6 +18,7 @@ function App() {
     // Auto-refresh every 5 minutes
     const interval = setInterval(loadAllData, 300000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadAllData = async () => {
