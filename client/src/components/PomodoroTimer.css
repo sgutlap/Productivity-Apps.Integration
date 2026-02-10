@@ -1,0 +1,135 @@
+/* Pomodoro Timer */
+.pomodoro-timer {
+  background: #1f1f1f;
+  border-radius: 10px;
+  padding: 24px;
+  border: 1px solid #2a2a2a;
+  text-align: center;
+}
+
+.timer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.timer-header h3 {
+  color: #e4e4e7;
+  margin: 0;
+  font-size: 1.2em;
+  font-weight: 600;
+}
+
+.sessions-count {
+  color: #71717a;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.sessions-count span {
+  color: #3b82f6;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.mode-switcher {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.mode-button {
+  background: #2a2a2a;
+  border: none;
+  color: #a1a1aa;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.mode-button:hover {
+  background: #3a3a3a;
+  color: #e4e4e7;
+}
+
+.mode-button.active {
+  background: #3b82f6;
+  color: #e4e4e7;
+}
+
+.timer-display {
+  display: flex;
+  justify-content: center;
+  margin: 32px 0;
+}
+
+.progress-ring {
+  position: relative;
+  width: 200px;
+  height: 200px;
+}
+
+.timer-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.timer-mode-label {
+  color: #71717a;
+  font-size: 0.8em;
+  font-weight: 500;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.timer-time {
+  color: #e4e4e7;
+  font-size: 2.5em;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+}
+
+.timer-controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.control-button {
+  border: none;
+  padding: 12px 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.control-button.primary {
+  background: #3b82f6;
+  color: #e4e4e7;
+}
+
+.control-button.primary:hover {
+  background: #2563eb;
+}
+
+.control-button.secondary {
+  background: #2a2a2a;
+  color: #a1a1aa;
+}
+
+.control-button.secondary:hover {
+  background: #3a3a3a;
+  color: #e4e4e7;
+}

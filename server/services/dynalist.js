@@ -72,23 +72,50 @@ class DynalistService {
   }
 
   parseNodes(nodes) {
-    // Parse nodes into a structured task list
-    const tasks = [];
+    // Parse nodes into a hierarchical structure
+    const nodeMap = new Map();
+    const rootNodes = [];
     
+    // First pass: create node map
     nodes.forEach(node => {
       if (node.content && node.content.trim()) {
-        tasks.push({
+        nodeMap.set(node.id, {
           id: node.id,
           content: node.content,
           note: node.note || '',
           checked: node.checked || false,
+          children: [],
           created: node.created,
           modified: node.modified
         });
       }
     });
     
-    return tasks;
+    // Second pass: build hierarchy
+    nodes.forEach(node => {
+      const currentNode = nodeMap.get(node.id);
+      if (currentNode) {
+        if (node.children && node.children.length > 0) {
+          node.children.forEach(childId => {
+            const childNode = nodeMap.get(childId);
+            if (childNode) {
+              currentNode.children.push(childNode);
+            }
+          });
+        }
+        
+        // Add to root if no parent or parent is root
+        const hasParent = nodes.some(n => 
+          n.children && n.children.includes(node.id) && n.id !== 'root'
+        );
+        
+        if (!hasParent || node.id === 'root') {
+          rootNodes.push(currentNode);
+        }
+      }
+    });
+    
+    return rootNodes;
   }
 }
 

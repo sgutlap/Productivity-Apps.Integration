@@ -1,0 +1,102 @@
+/* Eisenhower Matrix */
+.eisenhower-matrix {
+  background: #1f1f1f;
+  border-radius: 10px;
+  padding: 24px;
+  border: 1px solid #2a2a2a;
+}
+
+.matrix-header {
+  margin-bottom: 24px;
+}
+
+.matrix-header h3 {
+  color: #e4e4e7;
+  margin: 0 0 8px 0;
+  font-size: 1.2em;
+  font-weight: 600;
+}
+
+.matrix-header p {
+  color: #71717a;
+  margin: 0;
+  font-size: 0.85em;
+}
+
+.matrix-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.matrix-quadrant {
+  background: #2a2a2a;
+  border: 2px solid;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.matrix-quadrant:hover {
+  transform: translateY(-2px);
+}
+
+.quadrant-header {
+  padding: 16px;
+  position: relative;
+}
+
+.quadrant-header h4 {
+  margin: 0 0 4px 0;
+  font-size: 1em;
+  font-weight: 600;
+}
+
+.quadrant-header p {
+  margin: 0;
+  color: #a1a1aa;
+  font-size: 0.75em;
+  font-weight: 500;
+}
+
+.task-count {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #1f1f1f;
+  color: #e4e4e7;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+.quadrant-tasks {
+  padding: 16px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.matrix-task {
+  background: #1f1f1f;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: #e4e4e7;
+  font-size: 0.85em;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.more-tasks {
+  color: #71717a;
+  font-size: 0.8em;
+  text-align: center;
+  padding: 8px;
+}
+
+@media (max-width: 768px) {
+  .matrix-grid {
+    grid-template-columns: 1fr;
+  }
+}
