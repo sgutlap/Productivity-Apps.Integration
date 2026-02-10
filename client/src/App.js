@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
+import Calendar from './components/Calendar';
+import EisenhowerMatrix from './components/EisenhowerMatrix';
+import PomodoroTimer from './components/PomodoroTimer';
 
 function App() {
   const [activeView, setActiveView] = useState('dashboard');
@@ -193,6 +196,37 @@ function App() {
     }, 300);
   };
 
+  const handleCreateEvent = async (eventData) => {
+    try {
+      const eventStart = eventData.startTime 
+        ? `${eventData.date}T${eventData.startTime}`
+        : eventData.date;
+      
+      const eventEnd = eventData.endTime
+        ? `${eventData.date}T${eventData.endTime}`
+        : null;
+
+      await axios.post('/api/google/events', {
+        summary: eventData.title,
+        start: {
+          dateTime: eventStart,
+          timeZone: 'UTC'
+        },
+        end: eventEnd ? {
+          dateTime: eventEnd,
+          timeZone: 'UTC'
+        } : undefined,
+        recurrence: eventData.recurring !== 'none' ? [
+          `RRULE:FREQ=${eventData.recurring.toUpperCase()}`
+        ] : undefined
+      });
+
+      await loadCalendarData();
+    } catch (error) {
+      console.error('Failed to create event:', error);
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -309,6 +343,12 @@ function App() {
               <span>Calendar</span>
               <span className="nav-item-count">{stats.upcomingEvents}</span>
             </div>
+            <div 
+              className={`nav-item ${activeView === 'productivity' ? 'active' : ''}`}
+              onClick={() => setActiveView('productivity')}
+            >
+              <span>Focus</span>
+            </div>
           </div>
           
           <div className="nav-section">
@@ -340,6 +380,7 @@ function App() {
             {activeView === 'calendar' && 'Calendar'}
             {activeView === 'todoist' && 'Tasks'}
             {activeView === 'dynalist' && 'Lists'}
+            {activeView === 'productivity' && 'Focus'}
           </h1>
           <div className="top-bar-actions">
             <div className={`sync-status ${syncing ? 'syncing' : ''}`}>
@@ -805,57 +846,23 @@ function App() {
 
           {/* Calendar View */}
           {activeView === 'calendar' && (
-            <div className="card">
-              <div className="card-header">
-                <h2>Calendar Events</h2>
-                <button className="refresh-button" onClick={loadCalendarData}>
-                  Refresh
-                </button>
-              </div>
-              <div className="card-body">
-                {errors.calendar && (
-                  <div className="auth-section">
-                    <div className="auth-message">{errors.calendar}</div>
-                    {errors.calendar.includes('authenticate') && (
-                      <button className="auth-button" onClick={handleGoogleAuth}>
-                        🔐 Authenticate with Google
-                      </button>
-                    )}
-                  </div>
-                )}
-                {loading.calendar ? (
-                  <div className="loading">
-                    <div className="loading-spinner"></div>
-                    <p>Loading events...</p>
-                  </div>
-                ) : calendarEvents.length > 0 ? (
-                  <ul className="event-list">
-                    {calendarEvents.map(event => {
-                      const eventDate = event.start?.dateTime || event.start?.date;
-                      return (
-                        <li 
-                          key={event.id} 
-                          className={`event-item ${isToday(eventDate) ? 'today' : ''} ${isPast(eventDate) ? 'past' : ''}`}
-                        >
-                          <div className="event-time">
-                            🕒 {formatEventTime(event.start?.dateTime || event.start?.date, event.end?.dateTime || event.end?.date)}
-                          </div>
-                          <div className="event-title">{event.summary}</div>
-                          {event.description && (
-                            <div className="event-description">{event.description}</div>
-                          )}
-                          {event.location && (
-                            <div className="event-description">📍 {event.location}</div>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : !errors.calendar ? (
-                  <div className="no-data">
-                    <div className="no-data-text">No upcoming events</div>
-                  </div>
-                ) : null}
+            <Calendar 
+              events={calendarEvents}
+              onCreateEvent={handleCreateEvent}
+              onRefresh={loadCalendarData}
+            />
+          )}
+
+          {/* Productivity View - Eisenhower Matrix + Pomodoro */}
+          {activeView === 'productivity' && (
+            <div className="productivity-view">
+              <div className="productivity-grid">
+                <div className="productivity-section">
+                  <EisenhowerMatrix tasks={todoistTasks} />
+                </div>
+                <div className="productivity-section">
+                  <PomodoroTimer />
+                </div>
               </div>
             </div>
           )}

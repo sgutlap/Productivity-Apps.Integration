@@ -852,3 +852,24 @@ code {
   letter-spacing: 0.8px;
   font-weight: 500;
 }
+
+/* Productivity View */
+.productivity-view {
+  width: 100%;
+}
+
+.productivity-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+.productivity-section {
+  width: 100%;
+}
+
+@media (max-width: 1200px) {
+  .productivity-grid {
+    grid-template-columns: 1fr;
+  }
+}
