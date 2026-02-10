@@ -20,7 +20,7 @@ const EisenhowerMatrix = ({ tasks, onUpdateTask }) => {
     urgent_not_important: {
       title: 'Delegate',
       subtitle: 'Urgent & Not Important',
-      color: #3b82f6',
+      color: '#3b82f6',
       tasks: tasks.filter(t => t.priority === 2 && t.due && new Date(t.due.date) < new Date(Date.now() + 86400000))
     },
     not_urgent_not_important: {
