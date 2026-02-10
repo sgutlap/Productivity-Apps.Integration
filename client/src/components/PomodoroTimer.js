@@ -28,7 +28,7 @@ const PomodoroTimer = () => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isActive, timeLeft]);
+  }, [isActive, timeLeft, mode]);
 
   const handleTimerComplete = () => {
     setIsActive(false);

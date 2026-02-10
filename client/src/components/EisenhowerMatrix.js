@@ -3,31 +3,33 @@ import './EisenhowerMatrix.css';
 
 const EisenhowerMatrix = ({ tasks, onUpdateTask }) => {
   const [selectedQuadrant, setSelectedQuadrant] = useState(null);
+  
+  const MILLISECONDS_PER_DAY = 86400000;
 
   const quadrants = {
     urgent_important: {
       title: 'Do First',
       subtitle: 'Urgent & Important',
       color: '#ef4444',
-      tasks: tasks.filter(t => t.priority === 4 || (t.due && new Date(t.due.date) < new Date(Date.now() + 86400000)))
+      tasks: tasks.filter(t => t.priority === 4 || (t.due && new Date(t.due.date) < new Date(Date.now() + MILLISECONDS_PER_DAY)))
     },
     not_urgent_important: {
       title: 'Schedule',
       subtitle: 'Not Urgent & Important',
       color: '#f59e0b',
-      tasks: tasks.filter(t => t.priority === 3 && (!t.due || new Date(t.due.date) >= new Date(Date.now() + 86400000)))
+      tasks: tasks.filter(t => t.priority === 3 && (!t.due || new Date(t.due.date) >= new Date(Date.now() + MILLISECONDS_PER_DAY)))
     },
     urgent_not_important: {
       title: 'Delegate',
       subtitle: 'Urgent & Not Important',
       color: '#3b82f6',
-      tasks: tasks.filter(t => t.priority === 2 && t.due && new Date(t.due.date) < new Date(Date.now() + 86400000))
+      tasks: tasks.filter(t => t.priority === 2 && t.due && new Date(t.due.date) < new Date(Date.now() + MILLISECONDS_PER_DAY))
     },
     not_urgent_not_important: {
       title: 'Eliminate',
       subtitle: 'Not Urgent & Not Important',
       color: '#71717a',
-      tasks: tasks.filter(t => t.priority <= 2 && (!t.due || new Date(t.due.date) >= new Date(Date.now() + 86400000)))
+      tasks: tasks.filter(t => t.priority <= 2 && (!t.due || new Date(t.due.date) >= new Date(Date.now() + MILLISECONDS_PER_DAY)))
     }
   };
 

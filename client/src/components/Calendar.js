@@ -78,6 +78,7 @@ const Calendar = ({ events, onCreateEvent, onRefresh }) => {
   };
 
   const getEventsForDate = (date) => {
+    const today = new Date();
     return events.filter(event => {
       const eventDate = new Date(event.start?.dateTime || event.start?.date);
       return eventDate.toDateString() === date.toDateString();
