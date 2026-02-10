@@ -232,7 +232,6 @@ function App() {
       <aside className="sidebar">
         <div className="sidebar-header">
           <div className="logo">
-            <span>🎯</span>
             <span>Productivity Hub</span>
           </div>
         </div>
@@ -244,14 +243,12 @@ function App() {
               className={`nav-item ${activeView === 'dashboard' ? 'active' : ''}`}
               onClick={() => setActiveView('dashboard')}
             >
-              <span className="nav-item-icon">📊</span>
               <span>Dashboard</span>
             </div>
             <div 
               className={`nav-item ${activeView === 'today' ? 'active' : ''}`}
               onClick={() => setActiveView('today')}
             >
-              <span className="nav-item-icon">⭐</span>
               <span>Today</span>
               <span className="nav-item-count">{stats.totalTasks}</span>
             </div>
@@ -259,7 +256,6 @@ function App() {
               className={`nav-item ${activeView === 'calendar' ? 'active' : ''}`}
               onClick={() => setActiveView('calendar')}
             >
-              <span className="nav-item-icon">📅</span>
               <span>Calendar</span>
               <span className="nav-item-count">{stats.upcomingEvents}</span>
             </div>
@@ -271,16 +267,14 @@ function App() {
               className={`nav-item ${activeView === 'todoist' ? 'active' : ''}`}
               onClick={() => setActiveView('todoist')}
             >
-              <span className="nav-item-icon">✓</span>
-              <span>Todoist Tasks</span>
+              <span>Tasks</span>
               <span className="nav-item-count">{todoistTasks.length}</span>
             </div>
             <div 
               className={`nav-item ${activeView === 'dynalist' ? 'active' : ''}`}
               onClick={() => setActiveView('dynalist')}
             >
-              <span className="nav-item-icon">📝</span>
-              <span>Dynalist Lists</span>
+              <span>Lists</span>
               <span className="nav-item-count">{stats.totalDocs}</span>
             </div>
           </div>
@@ -291,11 +285,11 @@ function App() {
       <main className="main-content">
         <div className="top-bar">
           <h1 className="view-title">
-            {activeView === 'dashboard' && '📊 Dashboard'}
-            {activeView === 'today' && '⭐ Today'}
-            {activeView === 'calendar' && '📅 Calendar'}
-            {activeView === 'todoist' && '✓ Todoist Tasks'}
-            {activeView === 'dynalist' && '📝 Dynalist Lists'}
+            {activeView === 'dashboard' && 'Dashboard'}
+            {activeView === 'today' && 'Today'}
+            {activeView === 'calendar' && 'Calendar'}
+            {activeView === 'todoist' && 'Tasks'}
+            {activeView === 'dynalist' && 'Lists'}
           </h1>
           <div className="top-bar-actions">
             <div className={`sync-status ${syncing ? 'syncing' : ''}`}>
@@ -305,11 +299,11 @@ function App() {
                   <span>Syncing...</span>
                 </>
               ) : (
-                <span>✓ Synced</span>
+                <span>Synced</span>
               )}
             </div>
             <button className="icon-button" onClick={loadAllData} title="Refresh all">
-              🔄
+              ↻
             </button>
           </div>
         </div>
@@ -321,7 +315,7 @@ function App() {
               <input
                 type="text"
                 className="quick-add-input"
-                placeholder="✨ Quick add task... (Press Enter)"
+                placeholder="Add a new task... (Press Enter)"
                 value={quickAddText}
                 onChange={(e) => setQuickAddText(e.target.value)}
                 onKeyPress={handleQuickAddKeyPress}
@@ -347,22 +341,18 @@ function App() {
             <>
               <div className="stats">
                 <div className="stat-box">
-                  <div className="stat-icon">✓</div>
                   <span className="stat-number">{stats.totalTasks}</span>
                   <span className="stat-label">Active Tasks</span>
                 </div>
                 <div className="stat-box">
-                  <div className="stat-icon">📅</div>
                   <span className="stat-number">{stats.upcomingEvents}</span>
-                  <span className="stat-label">Upcoming Events</span>
+                  <span className="stat-label">Events</span>
                 </div>
                 <div className="stat-box">
-                  <div className="stat-icon">📝</div>
                   <span className="stat-number">{stats.totalDocs}</span>
                   <span className="stat-label">Documents</span>
                 </div>
                 <div className="stat-box">
-                  <div className="stat-icon">📋</div>
                   <span className="stat-number">{stats.dynalistItems || 0}</span>
                   <span className="stat-label">List Items</span>
                 </div>
@@ -372,13 +362,12 @@ function App() {
                 {/* Todoist Section */}
                 <div className="card">
                   <div className="card-header">
-                    <h2>✓ Todoist - Quick Tasks</h2>
-                    <button className="icon-button" onClick={loadTodoistData}>🔄</button>
+                    <h2>Quick Tasks</h2>
+                    <button className="icon-button" onClick={loadTodoistData}>↻</button>
                   </div>
                   <div className="card-body">
                     {errors.todoist && (
                       <div className="error">
-                        <span className="error-icon">⚠️</span>
                         <span>{errors.todoist}</span>
                       </div>
                     )}
@@ -397,7 +386,7 @@ function App() {
                               <div className="task-meta">
                                 {task.due && (
                                   <div className={`task-due ${getDueClass(task.due.date)}`}>
-                                    🗓️ {formatDate(task.due.date)}
+                                    {formatDate(task.due.date)}
                                   </div>
                                 )}
                                 {task.priority && task.priority > 1 && (
@@ -412,7 +401,6 @@ function App() {
                       </ul>
                     ) : (
                       <div className="no-data">
-                        <div className="no-data-icon">✓</div>
                         <div className="no-data-text">No active tasks</div>
                       </div>
                     )}
@@ -422,13 +410,12 @@ function App() {
                 {/* Dynalist Section */}
                 <div className="card">
                   <div className="card-header">
-                    <h2>📝 Dynalist - All Lists</h2>
-                    <button className="icon-button" onClick={loadDynalistData}>🔄</button>
+                    <h2>All Lists</h2>
+                    <button className="icon-button" onClick={loadDynalistData}>↻</button>
                   </div>
                   <div className="card-body">
                     {errors.dynalist && (
                       <div className="error">
-                        <span className="error-icon">⚠️</span>
                         <span>{errors.dynalist}</span>
                       </div>
                     )}
@@ -462,7 +449,6 @@ function App() {
                       </div>
                     ) : (
                       <div className="no-data">
-                        <div className="no-data-icon">📝</div>
                         <div className="no-data-text">No documents found</div>
                       </div>
                     )}
@@ -472,8 +458,8 @@ function App() {
                 {/* Google Calendar Section */}
                 <div className="card">
                   <div className="card-header">
-                    <h2>📅 Calendar - Upcoming</h2>
-                    <button className="icon-button" onClick={loadCalendarData}>🔄</button>
+                    <h2>Upcoming Events</h2>
+                    <button className="icon-button" onClick={loadCalendarData}>↻</button>
                   </div>
                   <div className="card-body">
                     {errors.calendar && (
@@ -481,7 +467,7 @@ function App() {
                         <div className="auth-message">{errors.calendar}</div>
                         {errors.calendar.includes('authenticate') && (
                           <button className="auth-button" onClick={handleGoogleAuth}>
-                            🔐 Authenticate with Google
+                            Authenticate with Google
                           </button>
                         )}
                       </div>
@@ -501,7 +487,7 @@ function App() {
                               className={`event-item ${isToday(eventDate) ? 'today' : ''} ${isPast(eventDate) ? 'past' : ''}`}
                             >
                               <div className="event-time">
-                                🕒 {formatEventTime(event.start?.dateTime || event.start?.date, event.end?.dateTime || event.end?.date)}
+                                {formatEventTime(event.start?.dateTime || event.start?.date, event.end?.dateTime || event.end?.date)}
                               </div>
                               <div className="event-title">{event.summary}</div>
                               {event.description && (
@@ -513,7 +499,6 @@ function App() {
                       </ul>
                     ) : !errors.calendar ? (
                       <div className="no-data">
-                        <div className="no-data-icon">📅</div>
                         <div className="no-data-text">No upcoming events</div>
                       </div>
                     ) : null}
@@ -527,15 +512,14 @@ function App() {
           {activeView === 'today' && (
             <div className="card">
               <div className="card-header">
-                <h2>⭐ Today's Tasks</h2>
+                <h2>Today's Tasks</h2>
                 <button className="refresh-button" onClick={loadTodoistData}>
-                  🔄 Refresh
+                  Refresh
                 </button>
               </div>
               <div className="card-body">
                 {errors.todoist && (
                   <div className="error">
-                    <span className="error-icon">⚠️</span>
                     <span>{errors.todoist}</span>
                   </div>
                 )}
@@ -569,8 +553,7 @@ function App() {
                   </ul>
                 ) : (
                   <div className="no-data">
-                    <div className="no-data-icon">⭐</div>
-                    <div className="no-data-text">No tasks for today. Great job!</div>
+                    <div className="no-data-text">No tasks for today</div>
                   </div>
                 )}
               </div>
@@ -581,15 +564,14 @@ function App() {
           {activeView === 'todoist' && (
             <div className="card">
               <div className="card-header">
-                <h2>✓ All Todoist Tasks</h2>
+                <h2>All Tasks</h2>
                 <button className="refresh-button" onClick={loadTodoistData}>
-                  🔄 Refresh
+                  Refresh
                 </button>
               </div>
               <div className="card-body">
                 {errors.todoist && (
                   <div className="error">
-                    <span className="error-icon">⚠️</span>
                     <span>{errors.todoist}</span>
                   </div>
                 )}
@@ -623,7 +605,6 @@ function App() {
                   </ul>
                 ) : (
                   <div className="no-data">
-                    <div className="no-data-icon">✓</div>
                     <div className="no-data-text">No tasks found</div>
                   </div>
                 )}
@@ -635,15 +616,14 @@ function App() {
           {activeView === 'dynalist' && (
             <div className="card">
               <div className="card-header">
-                <h2>📝 All Dynalist Documents</h2>
+                <h2>All Documents</h2>
                 <button className="refresh-button" onClick={loadDynalistData}>
-                  🔄 Refresh
+                  Refresh
                 </button>
               </div>
               <div className="card-body">
                 {errors.dynalist && (
                   <div className="error">
-                    <span className="error-icon">⚠️</span>
                     <span>{errors.dynalist}</span>
                   </div>
                 )}
@@ -682,7 +662,6 @@ function App() {
                   </div>
                 ) : (
                   <div className="no-data">
-                    <div className="no-data-icon">📝</div>
                     <div className="no-data-text">No documents found</div>
                   </div>
                 )}
@@ -694,9 +673,9 @@ function App() {
           {activeView === 'calendar' && (
             <div className="card">
               <div className="card-header">
-                <h2>📅 Google Calendar Events</h2>
+                <h2>Calendar Events</h2>
                 <button className="refresh-button" onClick={loadCalendarData}>
-                  🔄 Refresh
+                  Refresh
                 </button>
               </div>
               <div className="card-body">
@@ -740,7 +719,6 @@ function App() {
                   </ul>
                 ) : !errors.calendar ? (
                   <div className="no-data">
-                    <div className="no-data-icon">📅</div>
                     <div className="no-data-text">No upcoming events</div>
                   </div>
                 ) : null}
