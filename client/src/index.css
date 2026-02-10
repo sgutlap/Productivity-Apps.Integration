@@ -345,6 +345,12 @@ code {
   position: relative;
 }
 
+.task-item.completing {
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: all 0.3s ease;
+}
+
 .task-item:hover {
   background-color: #252525;
   margin: 0 -24px;
@@ -401,6 +407,52 @@ code {
 .task-completed .task-title {
   text-decoration: line-through;
   color: #71717a;
+}
+
+.completed-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #2a2a2a;
+}
+
+.completed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  cursor: pointer;
+  padding: 8px 0;
+}
+
+.completed-header:hover {
+  color: #a1a1aa;
+}
+
+.completed-title {
+  font-size: 0.9em;
+  color: #71717a;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.completed-count {
+  background: #2a2a2a;
+  color: #71717a;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.8em;
+}
+
+.completed-toggle {
+  color: #71717a;
+  font-size: 0.9em;
+  transition: transform 0.2s ease;
+}
+
+.completed-toggle.open {
+  transform: rotate(180deg);
 }
 
 .task-meta {
@@ -523,6 +575,58 @@ code {
   color: #3b82f6;
   margin-bottom: 12px;
   font-size: 1em;
+}
+
+/* Dynalist-style bullet list */
+.bullet-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.bullet-item {
+  position: relative;
+  padding: 4px 0 4px 20px;
+  color: #e4e4e7;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+
+.bullet-item::before {
+  content: '•';
+  position: absolute;
+  left: 4px;
+  color: #71717a;
+  font-size: 1.2em;
+  line-height: 1.4;
+}
+
+.bullet-item:hover {
+  background-color: #252525;
+  margin: 0 -12px;
+  padding: 4px 12px 4px 32px;
+  border-radius: 4px;
+}
+
+.bullet-item:hover::before {
+  left: 16px;
+}
+
+.bullet-content {
+  word-wrap: break-word;
+}
+
+.bullet-note {
+  color: #71717a;
+  font-size: 0.85em;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.bullet-children {
+  list-style: none;
+  padding-left: 20px;
+  margin-top: 4px;
 }
 
 /* Empty States */

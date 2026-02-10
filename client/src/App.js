@@ -5,6 +5,7 @@ import './App.css';
 function App() {
   const [activeView, setActiveView] = useState('dashboard');
   const [todoistTasks, setTodoistTasks] = useState([]);
+  const [completedTasks, setCompletedTasks] = useState([]);
   const [dynalistDocs, setDynalistDocs] = useState([]);
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [loading, setLoading] = useState({ todoist: false, dynalist: false, calendar: false });
@@ -12,6 +13,8 @@ function App() {
   const [stats, setStats] = useState({ totalTasks: 0, completedToday: 0, upcomingEvents: 0, totalDocs: 0 });
   const [quickAddText, setQuickAddText] = useState('');
   const [syncing, setSyncing] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [completingTaskId, setCompletingTaskId] = useState(null);
 
   useEffect(() => {
     loadAllData();
@@ -165,6 +168,31 @@ function App() {
     }
   };
 
+  const handleCompleteTask = async (taskId) => {
+    setCompletingTaskId(taskId);
+    
+    // Animate the task out
+    setTimeout(async () => {
+      const task = todoistTasks.find(t => t.id === taskId);
+      if (task) {
+        // Move to completed
+        setCompletedTasks(prev => [{ ...task, completedAt: new Date() }, ...prev]);
+        setTodoistTasks(prev => prev.filter(t => t.id !== taskId));
+        setCompletingTaskId(null);
+        
+        // Call API to complete task
+        try {
+          await axios.post(`/api/todoist/tasks/${taskId}/complete`);
+        } catch (error) {
+          console.error('Failed to complete task on server:', error);
+          // Revert on error
+          setTodoistTasks(prev => [...prev, task]);
+          setCompletedTasks(prev => prev.filter(t => t.id !== taskId));
+        }
+      }
+    }, 300);
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -224,6 +252,28 @@ function App() {
     if (date < now) return 'overdue';
     if (date.toDateString() === now.toDateString()) return 'today';
     return '';
+  };
+
+  const renderBulletList = (nodes, level = 0) => {
+    if (!nodes || nodes.length === 0) return null;
+    
+    return (
+      <ul className="bullet-list">
+        {nodes.map(node => (
+          <li key={node.id} className="bullet-item">
+            <div className="bullet-content">
+              {node.content}
+              {node.note && <div className="bullet-note">{node.note}</div>}
+            </div>
+            {node.children && node.children.length > 0 && (
+              <div className="bullet-children">
+                {renderBulletList(node.children, level + 1)}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    );
   };
 
   return (
@@ -377,28 +427,67 @@ function App() {
                         <p>Loading tasks...</p>
                       </div>
                     ) : todoistTasks.length > 0 ? (
-                      <ul className="task-list">
-                        {todoistTasks.slice(0, 10).map(task => (
-                          <li key={task.id} className="task-item">
-                            <input type="checkbox" className="task-checkbox" />
-                            <div className="task-content">
-                              <div className="task-title">{task.content}</div>
-                              <div className="task-meta">
-                                {task.due && (
-                                  <div className={`task-due ${getDueClass(task.due.date)}`}>
-                                    {formatDate(task.due.date)}
-                                  </div>
-                                )}
-                                {task.priority && task.priority > 1 && (
-                                  <div className={`task-priority ${task.priority === 4 ? 'high' : task.priority === 3 ? 'medium' : 'low'}`}>
-                                    P{5 - task.priority}
-                                  </div>
-                                )}
+                      <>
+                        <ul className="task-list">
+                          {todoistTasks.slice(0, 10).map(task => (
+                            <li 
+                              key={task.id} 
+                              className={`task-item ${completingTaskId === task.id ? 'completing' : ''}`}
+                            >
+                              <input 
+                                type="checkbox" 
+                                className="task-checkbox" 
+                                onChange={() => handleCompleteTask(task.id)}
+                                checked={false}
+                              />
+                              <div className="task-content">
+                                <div className="task-title">{task.content}</div>
+                                <div className="task-meta">
+                                  {task.due && (
+                                    <div className={`task-due ${getDueClass(task.due.date)}`}>
+                                      {formatDate(task.due.date)}
+                                    </div>
+                                  )}
+                                  {task.priority && task.priority > 1 && (
+                                    <div className={`task-priority ${task.priority === 4 ? 'high' : task.priority === 3 ? 'medium' : 'low'}`}>
+                                      P{5 - task.priority}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
+                            </li>
+                          ))}
+                        </ul>
+                        
+                        {completedTasks.length > 0 && (
+                          <div className="completed-section">
+                            <div className="completed-header" onClick={() => setShowCompleted(!showCompleted)}>
+                              <div className="completed-title">
+                                <span>Completed</span>
+                                <span className="completed-count">{completedTasks.length}</span>
+                              </div>
+                              <span className={`completed-toggle ${showCompleted ? 'open' : ''}`}>▼</span>
                             </div>
-                          </li>
-                        ))}
-                      </ul>
+                            {showCompleted && (
+                              <ul className="task-list">
+                                {completedTasks.map(task => (
+                                  <li key={task.id} className="task-item task-completed">
+                                    <input 
+                                      type="checkbox" 
+                                      className="task-checkbox" 
+                                      checked={true}
+                                      readOnly
+                                    />
+                                    <div className="task-content">
+                                      <div className="task-title">{task.content}</div>
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <div className="no-data">
                         <div className="no-data-text">No active tasks</div>
@@ -427,23 +516,9 @@ function App() {
                     ) : dynalistDocs.length > 0 ? (
                       <div>
                         {dynalistDocs.map(doc => (
-                          <div key={doc.documentId} className="document-section" style={{marginBottom: '20px'}}>
+                          <div key={doc.documentId} className="document-section">
                             <div className="document-title">{doc.documentTitle}</div>
-                            <ul className="task-list">
-                              {doc.tasks.slice(0, 5).map(task => (
-                                <li key={task.id} className={`task-item ${task.checked ? 'task-completed' : ''}`}>
-                                  <input 
-                                    type="checkbox" 
-                                    className="task-checkbox" 
-                                    checked={task.checked}
-                                    readOnly
-                                  />
-                                  <div className="task-content">
-                                    <div className="task-title">{task.content}</div>
-                                  </div>
-                                </li>
-                              ))}
-                            </ul>
+                            {renderBulletList(doc.tasks.slice(0, 10))}
                           </div>
                         ))}
                       </div>
@@ -529,28 +604,67 @@ function App() {
                     <p>Loading tasks...</p>
                   </div>
                 ) : todoistTasks.length > 0 ? (
-                  <ul className="task-list">
-                    {todoistTasks.map(task => (
-                      <li key={task.id} className="task-item">
-                        <input type="checkbox" className="task-checkbox" />
-                        <div className="task-content">
-                          <div className="task-title">{task.content}</div>
-                          <div className="task-meta">
-                            {task.due && (
-                              <div className={`task-due ${getDueClass(task.due.date)}`}>
-                                🗓️ {formatDate(task.due.date)}
-                              </div>
-                            )}
-                            {task.priority && task.priority > 1 && (
-                              <div className={`task-priority ${task.priority === 4 ? 'high' : task.priority === 3 ? 'medium' : 'low'}`}>
-                                P{5 - task.priority}
-                              </div>
-                            )}
+                  <>
+                    <ul className="task-list">
+                      {todoistTasks.map(task => (
+                        <li 
+                          key={task.id} 
+                          className={`task-item ${completingTaskId === task.id ? 'completing' : ''}`}
+                        >
+                          <input 
+                            type="checkbox" 
+                            className="task-checkbox"
+                            onChange={() => handleCompleteTask(task.id)}
+                            checked={false}
+                          />
+                          <div className="task-content">
+                            <div className="task-title">{task.content}</div>
+                            <div className="task-meta">
+                              {task.due && (
+                                <div className={`task-due ${getDueClass(task.due.date)}`}>
+                                  {formatDate(task.due.date)}
+                                </div>
+                              )}
+                              {task.priority && task.priority > 1 && (
+                                <div className={`task-priority ${task.priority === 4 ? 'high' : task.priority === 3 ? 'medium' : 'low'}`}>
+                                  P{5 - task.priority}
+                                </div>
+                              )}
+                            </div>
                           </div>
+                        </li>
+                      ))}
+                    </ul>
+                    
+                    {completedTasks.length > 0 && (
+                      <div className="completed-section">
+                        <div className="completed-header" onClick={() => setShowCompleted(!showCompleted)}>
+                          <div className="completed-title">
+                            <span>Completed</span>
+                            <span className="completed-count">{completedTasks.length}</span>
+                          </div>
+                          <span className={`completed-toggle ${showCompleted ? 'open' : ''}`}>▼</span>
                         </div>
-                      </li>
-                    ))}
-                  </ul>
+                        {showCompleted && (
+                          <ul className="task-list">
+                            {completedTasks.map(task => (
+                              <li key={task.id} className="task-item task-completed">
+                                <input 
+                                  type="checkbox" 
+                                  className="task-checkbox" 
+                                  checked={true}
+                                  readOnly
+                                />
+                                <div className="task-content">
+                                  <div className="task-title">{task.content}</div>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="no-data">
                     <div className="no-data-text">No tasks for today</div>
@@ -581,28 +695,67 @@ function App() {
                     <p>Loading tasks...</p>
                   </div>
                 ) : todoistTasks.length > 0 ? (
-                  <ul className="task-list">
-                    {todoistTasks.map(task => (
-                      <li key={task.id} className="task-item">
-                        <input type="checkbox" className="task-checkbox" />
-                        <div className="task-content">
-                          <div className="task-title">{task.content}</div>
-                          <div className="task-meta">
-                            {task.due && (
-                              <div className={`task-due ${getDueClass(task.due.date)}`}>
-                                🗓️ {formatDate(task.due.date)}
-                              </div>
-                            )}
-                            {task.priority && task.priority > 1 && (
-                              <div className={`task-priority ${task.priority === 4 ? 'high' : task.priority === 3 ? 'medium' : 'low'}`}>
-                                P{5 - task.priority}
-                              </div>
-                            )}
+                  <>
+                    <ul className="task-list">
+                      {todoistTasks.map(task => (
+                        <li 
+                          key={task.id} 
+                          className={`task-item ${completingTaskId === task.id ? 'completing' : ''}`}
+                        >
+                          <input 
+                            type="checkbox" 
+                            className="task-checkbox"
+                            onChange={() => handleCompleteTask(task.id)}
+                            checked={false}
+                          />
+                          <div className="task-content">
+                            <div className="task-title">{task.content}</div>
+                            <div className="task-meta">
+                              {task.due && (
+                                <div className={`task-due ${getDueClass(task.due.date)}`}>
+                                  {formatDate(task.due.date)}
+                                </div>
+                              )}
+                              {task.priority && task.priority > 1 && (
+                                <div className={`task-priority ${task.priority === 4 ? 'high' : task.priority === 3 ? 'medium' : 'low'}`}>
+                                  P{5 - task.priority}
+                                </div>
+                              )}
+                            </div>
                           </div>
+                        </li>
+                      ))}
+                    </ul>
+                    
+                    {completedTasks.length > 0 && (
+                      <div className="completed-section">
+                        <div className="completed-header" onClick={() => setShowCompleted(!showCompleted)}>
+                          <div className="completed-title">
+                            <span>Completed</span>
+                            <span className="completed-count">{completedTasks.length}</span>
+                          </div>
+                          <span className={`completed-toggle ${showCompleted ? 'open' : ''}`}>▼</span>
                         </div>
-                      </li>
-                    ))}
-                  </ul>
+                        {showCompleted && (
+                          <ul className="task-list">
+                            {completedTasks.map(task => (
+                              <li key={task.id} className="task-item task-completed">
+                                <input 
+                                  type="checkbox" 
+                                  className="task-checkbox" 
+                                  checked={true}
+                                  readOnly
+                                />
+                                <div className="task-content">
+                                  <div className="task-title">{task.content}</div>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="no-data">
                     <div className="no-data-text">No tasks found</div>
@@ -636,27 +789,8 @@ function App() {
                   <div>
                     {dynalistDocs.map(doc => (
                       <div key={doc.documentId} className="document-section" style={{marginBottom: '32px'}}>
-                        <div className="document-title" style={{fontSize: '1.2em', marginBottom: '16px'}}>{doc.documentTitle}</div>
-                        <ul className="task-list">
-                          {doc.tasks.map(task => (
-                            <li key={task.id} className={`task-item ${task.checked ? 'task-completed' : ''}`}>
-                              <input 
-                                type="checkbox" 
-                                className="task-checkbox" 
-                                checked={task.checked}
-                                readOnly
-                              />
-                              <div className="task-content">
-                                <div className="task-title">{task.content}</div>
-                                {task.note && (
-                                  <div className="task-meta">
-                                    <span style={{color: '#718096', fontSize: '0.85em'}}>{task.note}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
+                        <div className="document-title" style={{fontSize: '1.15em', marginBottom: '16px'}}>{doc.documentTitle}</div>
+                        {renderBulletList(doc.tasks)}
                       </div>
                     ))}
                   </div>
